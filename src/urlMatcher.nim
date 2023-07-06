@@ -11,18 +11,19 @@ type
     TyString
     TyFloat
     TyInt
+    TyAbsInt
     TyBool
   BElem = tuple[kind: Tys, data: string]
   Elem* = object
-   case kind: Tys
-   of TyString:
-     strVal: string
-   of TyFloat:
-     floatVal: float
-   of TyInt:
-     intVal: int
-   of TyBool:
-     boolVal: bool
+    case kind: Tys
+    of TyString:
+      strVal: string
+    of TyFloat:
+      floatVal: float
+    of TyInt, TyAbsInt:
+      intVal: int
+    of TyBool:
+      boolVal: bool
 
 proc splitType(str: string): BElem =
   let parts = str.split(":", 1)
@@ -36,6 +37,8 @@ proc splitType(str: string): BElem =
       return (TyFloat, parts[0])
     of "int":
       return (TyInt, parts[0])
+    of "absint":
+      return (TyAbsInt, parts[0])
     of "bool":
       return (TyBool, parts[0])
 
@@ -71,7 +74,15 @@ proc match*(path, matcher: string, matchTable: MatchTable, catchPrefix = '@'): b
   ##    echo mt["name"].strVal # prints "enthus1ast"
   ##
   matchTable.clear()
-  let pa = path.split("/")
+
+  # Strip all after (including) #, ?, & 
+  var startOfEndChar = path.find({'#', '?', '&'})
+  if startOfEndChar == -1:
+    startOfEndChar = path.len - 1
+  else:
+    startOfEndChar -= 1
+
+  let pa = path[0 .. startOfEndChar].split("/")
   let ma = matcher.split("/")
   if pa.len != ma.len: return false
   for idx in 0 ..< pa.len:
@@ -87,6 +98,11 @@ proc match*(path, matcher: string, matchTable: MatchTable, catchPrefix = '@'): b
           matchTable[data] = Elem(kind: TyFloat, floatVal: pi.parseFloat)
         of TyInt:
           matchTable[data] = Elem(kind: TyInt, intVal: pi.parseInt)
+        of TyAbsInt:
+          let intVal = pi.parseInt
+          if intVal < 0:
+            raise newException(ValueError, "TyAbsInt must be positive!")
+          matchTable[data] = Elem(kind: TyInt, intVal: intVal)
         of TyBool:
           matchTable[data] = Elem(kind: TyBool, boolVal: pi.parseBool)
       except:

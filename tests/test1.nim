@@ -30,7 +30,12 @@ when isMainModule:
       check true == match("/foo/-1337", "/foo/@id:int", mt)
       check mt["id"].intVal == -1337
 
-    # TODO do a positive only int!
+    test "absint":
+      # Int can match negative numbers as well
+      check true == match("/foo/1337", "/foo/@id:absint", mt)
+      check mt["id"].intVal == 1337
+
+      check false == match("/foo/-1337", "/foo/@id:absint", mt)
 
     test "float":
       # Float can also match int
@@ -39,8 +44,8 @@ when isMainModule:
 
       check true == match("/foo/1337", "/foo/@id:float", mt)
       check mt["id"].floatVal == 1337.0
+
     test "bool":
-      #
       # Bool matches multiple values 
       check true == match("/foo/true", "/foo/@id:bool", mt)
       check mt["id"].boolVal == true 
@@ -54,4 +59,20 @@ when isMainModule:
     test "Not matching":
       check false == match("/foo/baa", "/foo/@baa:int", mt)
       check false == match("/foo/FOO13.37", "/foo/@id:float", mt)
+
+    test "Other catchPrefix":
+      check true == match("/foo/true", "/foo/;id:bool", mt, catchPrefix = ';')
+      check mt["id"].boolVal == true 
+
+    test "Robustnes: # in url":
+      check true == match("/foo/13.37#foo", "/foo/@id:float", mt)
+      check mt["id"].floatVal == 13.37
+
+    test "Robustnes: ? in url":
+      check true == match("/foo/13.37?foo", "/foo/@id:float", mt)
+      check mt["id"].floatVal == 13.37
+
+    test "Robustnes: & in url":
+      check true == match("/foo/13.37&foo", "/foo/@id:float", mt)
+      check mt["id"].floatVal == 13.37
 
