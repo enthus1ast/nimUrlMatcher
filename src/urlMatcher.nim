@@ -17,13 +17,13 @@ type
   Elem* = object
     case kind: Tys
     of TyString:
-      strVal: string
+      strVal*: string
     of TyFloat:
-      floatVal: float
+      floatVal*: float
     of TyInt, TyAbsInt:
-      intVal: int
+      intVal*: int
     of TyBool:
-      boolVal: bool
+      boolVal*: bool
 
 proc splitType(str: string): BElem =
   let parts = str.split(":", 1)
@@ -42,7 +42,7 @@ proc splitType(str: string): BElem =
     of "bool":
       return (TyBool, parts[0])
 
-proc match*(path, matcher: string, matchTable: MatchTable, catchPrefix = '@'): bool =
+proc match*(path, matcher: string or static string, matchTable: MatchTable, catchPrefix = '@'): bool =
   ## Returns `true` if a route matches, also stores matched variables in 
   ## the `matchTable`.
   ## Valid types to match are:
@@ -83,13 +83,16 @@ proc match*(path, matcher: string, matchTable: MatchTable, catchPrefix = '@'): b
     startOfEndChar -= 1
 
   let pa = path[0 .. startOfEndChar].split("/")
-  let ma = matcher.split("/")
+  when matcher is static string:
+    const ma = matcher.split("/")
+  else:
+    let ma = matcher.split("/")
   if pa.len != ma.len: return false
-  for idx in 0 ..< pa.len:
+  for idx in 0 ..< ma.len:
     let pi = pa[idx]
     let mi = ma[idx]
     if mi.startsWith(catchPrefix):
-      let (ty, data) = mi[1..^1].splitType()
+      let (ty, data) = mi[1..^1].splitType() # TODO this could also be done on compile time if static string
       try:
         case ty
         of TyString:
@@ -105,7 +108,7 @@ proc match*(path, matcher: string, matchTable: MatchTable, catchPrefix = '@'): b
           matchTable[data] = Elem(kind: TyInt, intVal: intVal)
         of TyBool:
           matchTable[data] = Elem(kind: TyBool, boolVal: pi.parseBool)
-      except:
+      except CatchableError:
         return false
     elif pi == mi: continue
     else: return false
@@ -114,12 +117,4 @@ proc match*(path, matcher: string, matchTable: MatchTable, catchPrefix = '@'): b
 proc newMatchTable*(): MatchTable =
   ## Creates a new table that contains all the matches
   return newTable[string, Elem]()
-
-# when isMainModule:
-#   import benchy
-#   var mt = newMatchTable()
-#   timeit "old": 
-#     for idx in 0 .. 10_000:
-#       assert true == match("/foo/baa", "/foo/@baa:string", mt)
-#       assert mt["baa"].strVal == "baa"
 
