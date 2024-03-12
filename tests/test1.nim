@@ -76,3 +76,28 @@ when isMainModule:
       check true == match("/foo/13.37&foo", "/foo/@id:float", mt)
       check mt["id"].floatVal == 13.37
 
+    test "* star match simple":
+      check false == match("/nomatch/baa.png", "/static/*", mt) 
+      check true == match("/static/baa.png", "/static/*", mt) 
+      check mt["*0"].strVal == "baa.png"
+
+    test "* star match simple 2x":
+      check false == match("/nomatch/images/baa.png", "/static/*/*", mt) 
+      check true == match("/static/images/baa.png", "/static/*/*", mt) 
+      check mt["*0"].strVal == "images"
+      check mt["*1"].strVal == "baa.png"
+
+    test "* star match middle":
+      check false == match("/nomatch/images/baa.png", "/static/*/baa.png", mt) 
+      check true == match("/static/images/baa.png", "/static/*/baa.png", mt) 
+      check mt["*0"].strVal == "images"
+
+    test "** star star match 1x":
+     check false == match("/nomatch/baa", "/static/**", mt)
+     check true == match("/static/baa", "/static/**", mt)
+     check mt["**"].strVal == "baa"
+
+    test "** star star match nx":
+     check false == match("/nomatch/baa", "/foo/**", mt)
+     check true == match("/static/images/foo.png", "/static/**", mt)
+     check mt["**"].strVal == "images/foo.png"

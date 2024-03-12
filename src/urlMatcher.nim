@@ -53,6 +53,16 @@ proc match*(path, matcher: string or static string, matchTable: MatchTable, catc
   ##    - y, yes, true, 1, on  => true 
   ##    - n, no, false, 0, off => false
   ##
+  ## Wildcard (*):
+  ##    - `foo/*/baa/*/baz`
+  ##      - every "*" is captured as `TyString`
+  ##      - is named `*0`, `*1` etc..
+  ##
+  ## Wildcard (**):
+  ##    - `static/**` 
+  ##      - only allowed once (at the end)
+  ##      - is captured as a `TyString`
+  ##      - used to capture all the "rest"
   ##
   ## Matchers are written like so:
   ##
@@ -63,6 +73,7 @@ proc match*(path, matcher: string or static string, matchTable: MatchTable, catc
   ## - `"/foo/@uuid:string"`
   ## - `"/foo/@id:int"`
   ## - `"/foo/@enabled:bool"`
+  ## - `"/foo/*/baa"`
   ##
   ## .. code-block:: Nim
   ##  var mt = newMatchTable()
@@ -87,11 +98,21 @@ proc match*(path, matcher: string or static string, matchTable: MatchTable, catc
     const ma = matcher.split("/")
   else:
     let ma = matcher.split("/")
-  if pa.len != ma.len: return false
+  if not matcher.contains("**"): # TODO find a better way, we scan the matcher multiple times
+    if pa.len != ma.len: return false 
+  var staridx = 0 # used for ONE '*' 
   for idx in 0 ..< ma.len:
     let pi = pa[idx]
     let mi = ma[idx]
-    if mi.startsWith(catchPrefix):
+    if mi == "**":
+      ## ** is only allowed once (at the end)
+      let rest = pa[idx .. ^1].join("/")
+      matchTable["**"] = Elem(kind: TyString, strVal: rest)
+      break
+    elif mi == "*":
+      matchTable["*" & $staridx] = Elem(kind: TyString, strVal: pi)
+      staridx.inc
+    elif mi.startsWith(catchPrefix):
       let (ty, data) = mi[1..^1].splitType() # TODO this could also be done on compile time if static string
       try:
         case ty
