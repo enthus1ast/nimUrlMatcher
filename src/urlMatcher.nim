@@ -139,3 +139,37 @@ proc newMatchTable*(): MatchTable =
   ## Creates a new table that contains all the matches
   return newTable[string, Elem]()
 
+proc to*[T](mt: MatchTable, ty: typedesc[T], skipMissing = false): T =
+  ## Converts the match table to the given object
+  ## If `skipMissing` is true fields not found in the matchtable are ignored
+  for key, val in fieldPairs(result):
+    if (mt.hasKey(key) or (not skipMissing)):
+      when val is string:
+        val = mt[key].strVal
+      elif val is int:
+        val = mt[key].intVal
+      elif val is float:
+        val = mt[key].floatVal
+      elif val is bool:
+        val = mt[key].boolVal
+      else:
+        {.error: "unsupported type".}
+
+when isMainModule:
+  var mt = newMatchTable()
+
+  type
+    MyMatch = object
+      foo: string
+      id: int
+      notThere: float # this is skipped since its not there
+
+  if match("/api/get/123", "/api/@foo/@id:int", mt):
+    echo mt
+    echo mt["id"].intVal # prints 123
+
+
+      
+  echo mt.to(MyMatch, skipMissing = true)
+  # echo mt.to(MyMatch, skipMissing = false)
+    
