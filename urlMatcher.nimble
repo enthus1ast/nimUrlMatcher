@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.4.0"
+version       = "0.5.0"
 author        = "David Krause (enthus1ast)"
 description   = "A module for matching and capturing url routes."
 license       = "MIT"
